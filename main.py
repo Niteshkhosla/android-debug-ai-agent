@@ -3,9 +3,20 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph,END
 from typing import TypedDict
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import SentenceTransformerEmbeddings
+from langchain_text_splitters import CharacterTextSplitter
+
 
 load_dotenv()
 llm = ChatGroq(model="llama-3.3-70b-versatile")
+
+# RAG - Knowledge Base load karo
+embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+vectorstore = Chroma(
+    persist_directory="./android_knowledge",
+    embedding_function=embeddings
+)
 
 # State - saare agents ka shared data
 class CrashState(TypedDict):
@@ -13,6 +24,7 @@ class CrashState(TypedDict):
       crash_type:str
       solution:str
       report: str
+      relevant_docs: str
     
     
 # Node 1 - Crash classify karo
@@ -41,6 +53,14 @@ def suggest_solution(state:CrashState):
     return {"solution":result.content}
 
 
+# RAG Node - Docs search karo
+def search_docs(state:CrashState):
+    docs=vectorstore.similarity_search(state["crash_type"], k=1)
+    relevant=docs[0].page_content if(docs) else "No docs found"
+    return {"relevant_docs":relevant}
+
+
+
 # Node 3-Report Generator
 def report_generator(state:CrashState):
     prompt=ChatPromptTemplate.from_messages(
@@ -63,12 +83,15 @@ def report_generator(state:CrashState):
     
 # Graph banao
 graph=StateGraph(CrashState)
+
 graph.add_node("classify",Classify_crash)
+graph.add_node("search_docs", search_docs)
 graph.add_node("solution",suggest_solution)
 graph.add_node("report",report_generator)
 
 graph.set_entry_point("classify")
-graph.add_edge("classify","solution")
+graph.add_edge("classify", "search_docs")
+graph.add_edge("search_docs", "solution")
 graph.add_edge("solution", "report")
 graph.add_edge("report", END)
     
@@ -84,9 +107,11 @@ java.lang.OutOfMemoryError"
 """,
 "crash_type": "",
 "solution": "",
-"report": ""
+"report": "",
+"relevant_docs": "",
 })
     
 print(f"Crash Type: {result['crash_type']}")
 print(f"Solution:{result['solution']}")
 print(f"\nReport:\n{result['report']}")
+print(f"\nRelevant Docs: {result['relevant_docs']}")
