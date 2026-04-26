@@ -1,122 +1,188 @@
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from langgraph.graph import StateGraph,END
+from langgraph.graph import StateGraph, END
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import SentenceTransformerEmbeddings
 from typing import TypedDict
-from langchain_text_splitters import CharacterTextSplitter
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-
 
 load_dotenv()
+
 llm = ChatGroq(model="llama-3.3-70b-versatile")
 
-# File se crash log padhna
-with open("crash_log.txt", "r") as file:
-     crash_log = file.read()
-
-print("✅ Crash log loaded!")
-print(f"Log size: {len(crash_log)} characters\n")
-
-
 # RAG - Knowledge Base load karo
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = Chroma(
     persist_directory="./android_knowledge",
     embedding_function=embeddings
 )
 
-# State - saare agents ka shared data
+# File se crash log padhna
+with open("crash_log.txt", "r") as file:
+    crash_log = file.read()
+
+print("✅ Crash log loaded!")
+print(f"Log size: {len(crash_log)} characters\n")
+
+# State
 class CrashState(TypedDict):
-      crash_log:str
-      crash_type:str
-      solution:str
-      report: str
-      relevant_docs: str
-    
-    
-# Node 1 - Crash classify karo
-def Classify_crash(state:CrashState):
-    prompt=ChatPromptTemplate.from_messages(
-    [
-        ("system", "You are an Android expert. Classify the crash type only in one word: NPE, ANR, OOM, or OTHER."),
+    crash_log: str
+    crash_type: str
+    severity: str
+    relevant_docs: str
+    solution: str
+    report: str
+
+# Agent 1 - Classify
+def classify_crash(state: CrashState):
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are an Android expert. 
+Classify the crash into EXACTLY one of these:
+- NPE (NullPointerException)
+- ANR (Application Not Responding)
+- OOM (OutOfMemoryError)
+- OTHER
+Reply with ONLY one word."""),
         ("human", "Classify this crash: {crash_log}")
     ])
-        
-    chain =prompt|llm
-    result=chain.invoke({"crash_log":state['crash_log']})
+    chain = prompt | llm
+    result = chain.invoke({"crash_log": state["crash_log"]})
     return {"crash_type": result.content}
 
+# RAG Node
+def search_docs(state: CrashState):
+    docs = vectorstore.similarity_search(state["crash_type"], k=1)
+    relevant = docs[0].page_content if docs else "No docs found"
+    return {"relevant_docs": relevant}
 
-# Node 2-Solution
-def suggest_solution(state:CrashState):
-    prompt=ChatPromptTemplate.from_messages(
-    [
-        ("system","You are an Android expert. Give a short Kotlin fix."),
-        ("human","Crash type is {crash_type}. Give fix.")
+# Router
+def route_crash(state: CrashState):
+    crash_type = state["crash_type"].strip()
+    if "NPE" in crash_type:
+        return "npe_solution"
+    elif "ANR" in crash_type:
+        return "anr_solution"
+    elif "OOM" in crash_type:
+        return "oom_solution"
+    else:
+        return "other_solution"
+
+# NPE Solution Agent
+def npe_solution(state: CrashState):
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are Android expert. Fix NPE using Kotlin safe operators."),
+        ("human", "Fix this NPE crash: {crash_log}\nDocs: {relevant_docs}")
     ])
-    
-    chain=prompt|llm
-    result=chain.invoke({"crash_type",state['crash_type']})
-    return {"solution":result.content}
+    chain = prompt | llm
+    result = chain.invoke({
+        "crash_log": state["crash_log"],
+        "relevant_docs": state["relevant_docs"]
+    })
+    return {"solution": result.content, "severity": "LOW"}
 
+# ANR Solution Agent
+def anr_solution(state: CrashState):
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are Android expert. Fix ANR using Coroutines and async."),
+        ("human", "Fix this ANR crash: {crash_log}\nDocs: {relevant_docs}")
+    ])
+    chain = prompt | llm
+    result = chain.invoke({
+        "crash_log": state["crash_log"],
+        "relevant_docs": state["relevant_docs"]
+    })
+    return {"solution": result.content, "severity": "MEDIUM"}
 
-# RAG Node - Docs search karo
-def search_docs(state:CrashState):
-    docs=vectorstore.similarity_search(state["crash_type"], k=1)
-    relevant=docs[0].page_content if(docs) else "No docs found"
-    return {"relevant_docs":relevant}
+# OOM Solution Agent
+def oom_solution(state: CrashState):
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are Android expert. Fix OOM using memory management."),
+        ("human", "Fix this OOM crash: {crash_log}\nDocs: {relevant_docs}")
+    ])
+    chain = prompt | llm
+    result = chain.invoke({
+        "crash_log": state["crash_log"],
+        "relevant_docs": state["relevant_docs"]
+    })
+    return {"solution": result.content, "severity": "HIGH"}
 
+# Other Solution Agent
+def other_solution(state: CrashState):
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are Android expert. Analyze and fix this crash."),
+        ("human", "Fix this crash: {crash_log}\nDocs: {relevant_docs}")
+    ])
+    chain = prompt | llm
+    result = chain.invoke({
+        "crash_log": state["crash_log"],
+        "relevant_docs": state["relevant_docs"]
+    })
+    return {"solution": result.content, "severity": "UNKNOWN"}
 
-
-# Node 3-Report Generator
-def report_generator(state:CrashState):
-    prompt=ChatPromptTemplate.from_messages(
-        [
-            ("system","""You are an Android expert. 
-                    Generate a professional crash analysis report in table format.
-                    Include: Crash Type, Severity, Root Cause, Solution, Prevention."""),
-            
-            ("human","""Generate report for:
-                        Crash Type: {crash_type}
-                        Solution: {solution}""")
-        ])
-    
-    chain=prompt|llm    
+# Report Agent
+def generate_report(state: CrashState):
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are an Android expert. 
+Generate professional crash report in table format.
+Include: Crash Type, Severity, Root Cause, Solution, Prevention."""),
+        ("human", """Generate report for:
+Crash Type: {crash_type}
+Severity: {severity}
+Solution: {solution}""")
+    ])
+    chain = prompt | llm
     result = chain.invoke({
         "crash_type": state["crash_type"],
+        "severity": state["severity"],
         "solution": state["solution"]
     })
-    return {"report":result.content}
-    
-# Graph banao
-graph=StateGraph(CrashState)
+    return {"report": result.content}
 
-graph.add_node("classify",Classify_crash)
+# Graph
+graph = StateGraph(CrashState)
+graph.add_node("classify", classify_crash)
 graph.add_node("search_docs", search_docs)
-graph.add_node("solution",suggest_solution)
-graph.add_node("report",report_generator)
+graph.add_node("npe_solution", npe_solution)
+graph.add_node("anr_solution", anr_solution)
+graph.add_node("oom_solution", oom_solution)
+graph.add_node("other_solution", other_solution)
+graph.add_node("report", generate_report)
 
 graph.set_entry_point("classify")
 graph.add_edge("classify", "search_docs")
-graph.add_edge("search_docs", "solution")
-graph.add_edge("solution", "report")
+
+# Conditional Routing
+graph.add_conditional_edges(
+    "search_docs",
+    route_crash,
+    {
+        "npe_solution": "npe_solution",
+        "anr_solution": "anr_solution",
+        "oom_solution": "oom_solution",
+        "other_solution": "other_solution"
+    }
+)
+
+graph.add_edge("npe_solution", "report")
+graph.add_edge("anr_solution", "report")
+graph.add_edge("oom_solution", "report")
+graph.add_edge("other_solution", "report")
 graph.add_edge("report", END)
-    
-# Compile karo
-app=graph.compile()
-    
-# Run karo
-result=app.invoke(
-{
-"crash_log": crash_log,
-"crash_type": "",
-"solution": "",
-"report": "",
-"relevant_docs": "",
+
+# Compile
+app = graph.compile()
+
+# Run
+result = app.invoke({
+    "crash_log": crash_log,
+    "crash_type": "",
+    "severity": "",
+    "relevant_docs": "",
+    "solution": "",
+    "report": ""
 })
-    
-print(f"Crash Type: {result['crash_type']}")
-print(f"Solution:{result['solution']}")
+
+print(f"Crash Type : {result['crash_type']}")
+print(f"Severity   : {result['severity']}")
+print(f"\nSolution:\n{result['solution']}")
 print(f"\nReport:\n{result['report']}")
-print(f"\nRelevant Docs: {result['relevant_docs']}")
