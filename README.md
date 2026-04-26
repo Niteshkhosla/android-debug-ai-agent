@@ -1,20 +1,33 @@
 # 🤖 Android Debugging AI Agent
 
-> AI-powered Android crash analyzer — 
-> Built by a 13+ year Android Expert
+> AI-powered Android crash analyzer — Built by a 13+ Year Android Expert
 
 ## 🎯 What it does
-- Automatically classifies Android crashes (NPE, ANR, OOM)
-- Suggests Kotlin fixes using AI
-- Multi-agent system using LangGraph
+- **Agent 1** — Classifies Android crashes (NPE, ANR, OOM)
+- **Agent 2** — Suggests Kotlin fixes using AI
+- **Agent 3** — Generates professional crash report in table format
+
+## 🔄 Flow
+
+Crash Log → Agent 1 (Classify) → Agent 2 (Fix) → Agent 3 (Report) → Output
 
 ## 🛠️ Tech Stack
-- Python, LangGraph, LangChain, Groq LLM
+- Python
+- LangGraph — Multi Agent System
+- LangChain — AI Chains
+- Groq LLM — llama-3.3-70b
+- python-dotenv
 
 ## 🚀 How to run
-pip install -r requirements.txt
-python main.py
+
+**1. Install dependencies**
+
+**2. Add API key — create .env file**
+
+**3. Run**
 
 ## 👨‍💻 Author
-Nitesh Khosla
-13+ Years Android Experience
+**Nitesh Khosla**
+13+ Years Android Experience | Principal Android Architect
+LinkedIn: linkedin.com/in/nitesh-khosla-57574637
+GitHub: github.com/Niteshkhosla
