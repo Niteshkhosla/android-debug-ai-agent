@@ -11,6 +11,14 @@ from langchain_text_splitters import CharacterTextSplitter
 load_dotenv()
 llm = ChatGroq(model="llama-3.3-70b-versatile")
 
+# File se crash log padhna
+with open("crash_log.txt", "r") as file:
+     crash_log = file.read()
+
+print("✅ Crash log loaded!")
+print(f"Log size: {len(crash_log)} characters\n")
+
+
 # RAG - Knowledge Base load karo
 embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = Chroma(
@@ -101,10 +109,7 @@ app=graph.compile()
 # Run karo
 result=app.invoke(
 {
-"crash_log": """
-java.lang.OutOfMemoryError"
-"ANR in com.example.app
-""",
+"crash_log": crash_log,
 "crash_type": "",
 "solution": "",
 "report": "",
