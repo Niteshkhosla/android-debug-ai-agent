@@ -1,0 +1,5 @@
+AndroidRuntime: FATAL EXCEPTION: main
+Process: com.example.app
+java.lang.NullPointerException: Attempt to invoke virtual method
+at MainActivity.onCreate(MainActivity.kt:42)
+at android.app.Activity.performCreate(Activity.java:8000)
