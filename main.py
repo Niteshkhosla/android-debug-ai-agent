@@ -12,6 +12,7 @@ class CrashState(TypedDict):
       crash_log:str
       crash_type:str
       solution:str
+      report: str
     
     
 # Node 1 - Crash classify karo
@@ -39,17 +40,37 @@ def suggest_solution(state:CrashState):
     result=chain.invoke({"crash_type",state['crash_type']})
     return {"solution":result.content}
 
-        
+
+# Node 3-Report Generator
+def report_generator(state:CrashState):
+    prompt=ChatPromptTemplate.from_messages(
+        [
+            ("system","""You are an Android expert. 
+                    Generate a professional crash analysis report in table format.
+                    Include: Crash Type, Severity, Root Cause, Solution, Prevention."""),
+            
+            ("human","""Generate report for:
+                        Crash Type: {crash_type}
+                        Solution: {solution}""")
+        ])
     
+    chain=prompt|llm    
+    result = chain.invoke({
+        "crash_type": state["crash_type"],
+        "solution": state["solution"]
+    })
+    return {"report":result.content}
     
 # Graph banao
 graph=StateGraph(CrashState)
 graph.add_node("classify",Classify_crash)
 graph.add_node("solution",suggest_solution)
+graph.add_node("report",report_generator)
 
 graph.set_entry_point("classify")
 graph.add_edge("classify","solution")
-graph.add_edge("solution", END)
+graph.add_edge("solution", "report")
+graph.add_edge("report", END)
     
 # Compile karo
 app=graph.compile()
@@ -62,8 +83,10 @@ java.lang.OutOfMemoryError"
 "ANR in com.example.app
 """,
 "crash_type": "",
-"solution": ""
+"solution": "",
+"report": ""
 })
     
 print(f"Crash Type: {result['crash_type']}")
 print(f"Solution:{result['solution']}")
+print(f"\nReport:\n{result['report']}")
