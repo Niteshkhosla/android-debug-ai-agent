@@ -3,9 +3,9 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph,END
 from typing import TypedDict
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain_text_splitters import CharacterTextSplitter
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 
 
 load_dotenv()
@@ -20,7 +20,7 @@ print(f"Log size: {len(crash_log)} characters\n")
 
 
 # RAG - Knowledge Base load karo
-embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = Chroma(
     persist_directory="./android_knowledge",
     embedding_function=embeddings
