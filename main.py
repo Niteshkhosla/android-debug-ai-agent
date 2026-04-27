@@ -22,7 +22,7 @@ vectorstore = Chroma(
 with open("crash_log.txt", "r") as file:
     crash_log = file.read()
 
-print("✅ Crash log loaded!")
+print("Crash log loaded!")
 print(f"Log size: {len(crash_log)} characters\n")
 
 # State
@@ -204,4 +204,4 @@ with open(filename, "w") as file:
     file.write("DETAILED REPORT:\n")
     file.write(result['report'] + "\n")
 
-print(f"\n✅ Report saved: {filename}")
+print(f"\n Report saved: {filename}")
