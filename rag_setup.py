@@ -29,7 +29,7 @@ android_docs = [
 ]
 
 # Embeddings setup
-embedding =SentenceTransformerEmbeddings(
+embedding =HuggingFaceEmbeddings(
  model_name="all-MiniLM-L6-v2"
 )
 
