@@ -7,6 +7,19 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from state import CrashState
 from datetime import datetime
 
+from constants import (
+    CLASSIFY_SYSTEM, CLASSIFY_HUMAN,
+    NPE_SYSTEM, NPE_HUMAN,
+    ANR_SYSTEM, ANR_HUMAN,
+    OOM_SYSTEM, OOM_HUMAN,
+    OTHER_SYSTEM, OTHER_HUMAN,
+    REPORT_SYSTEM, REPORT_HUMAN,
+    SEVERITY_NPE, SEVERITY_ANR,
+    SEVERITY_OOM, SEVERITY_OTHER,
+    CRASH_LOG_FILE, KNOWLEDGE_BASE_DIR, REPORT_PREFIX
+)
+
+
 load_dotenv()
 
 llm = ChatGroq(model="llama-3.3-70b-versatile")
@@ -14,30 +27,25 @@ llm = ChatGroq(model="llama-3.3-70b-versatile")
 # RAG - Knowledge Base load karo
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = Chroma(
-    persist_directory="./android_knowledge",
+    persist_directory=KNOWLEDGE_BASE_DIR,
     embedding_function=embeddings
 )
 
 # File se crash log padhna
-with open("crash_log.txt", "r") as file:
+with open(CRASH_LOG_FILE, "r") as file:
     crash_log = file.read()
 
-print("Crash log loaded!")
+print("✅ Crash log loaded!")
 print(f"Log size: {len(crash_log)} characters\n")
 
 
 # Agent 1 - Classify
 def classify_crash(state: CrashState):
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are an Android expert. 
-Classify the crash into EXACTLY one of these:
-- NPE (NullPointerException)
-- ANR (Application Not Responding)
-- OOM (OutOfMemoryError)
-- OTHER
-Reply with ONLY one word."""),
-        ("human", "Classify this crash: {crash_log}")
-    ])
+        ("system", CLASSIFY_SYSTEM),
+        ("human", CLASSIFY_HUMAN)
+        ])
+    
     chain = prompt | llm
     result = chain.invoke({"crash_log": state["crash_log"]})
     return {"crash_type": result.content}
@@ -63,65 +71,60 @@ def route_crash(state: CrashState):
 # NPE Solution Agent
 def npe_solution(state: CrashState):
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are Android expert. Fix NPE using Kotlin safe operators."),
-        ("human", "Fix this NPE crash: {crash_log}\nDocs: {relevant_docs}")
+        ("system", NPE_SYSTEM),
+        ("human", NPE_HUMAN)
     ])
     chain = prompt | llm
     result = chain.invoke({
         "crash_log": state["crash_log"],
         "relevant_docs": state["relevant_docs"]
     })
-    return {"solution": result.content, "severity": "LOW"}
+    return {"solution": result.content, "severity": SEVERITY_NPE}
 
 # ANR Solution Agent
 def anr_solution(state: CrashState):
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are Android expert. Fix ANR using Coroutines and async."),
-        ("human", "Fix this ANR crash: {crash_log}\nDocs: {relevant_docs}")
+        ("system",ANR_SYSTEM),
+        ("human", ANR_HUMAN)
     ])
     chain = prompt | llm
     result = chain.invoke({
         "crash_log": state["crash_log"],
         "relevant_docs": state["relevant_docs"]
     })
-    return {"solution": result.content, "severity": "MEDIUM"}
+    return {"solution": result.content, "severity": SEVERITY_ANR}
 
 # OOM Solution Agent
 def oom_solution(state: CrashState):
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are Android expert. Fix OOM using memory management."),
-        ("human", "Fix this OOM crash: {crash_log}\nDocs: {relevant_docs}")
+        ("system", OOM_SYSTEM),
+        ("human", OOM_HUMAN)
     ])
     chain = prompt | llm
     result = chain.invoke({
         "crash_log": state["crash_log"],
         "relevant_docs": state["relevant_docs"]
     })
-    return {"solution": result.content, "severity": "HIGH"}
+    return {"solution": result.content, "severity": SEVERITY_OOM}
 
 # Other Solution Agent
 def other_solution(state: CrashState):
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are Android expert. Analyze and fix this crash."),
-        ("human", "Fix this crash: {crash_log}\nDocs: {relevant_docs}")
+        ("system", OTHER_SYSTEM),
+        ("human", OTHER_HUMAN)
     ])
     chain = prompt | llm
     result = chain.invoke({
         "crash_log": state["crash_log"],
         "relevant_docs": state["relevant_docs"]
     })
-    return {"solution": result.content, "severity": "UNKNOWN"}
+    return {"solution": result.content, "severity":SEVERITY_OTHER}
 
 # Report Agent
 def generate_report(state: CrashState):
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are an Android expert. 
-Generate professional crash report in table format.
-Include: Crash Type, Severity, Root Cause, Solution, Prevention."""),
-        ("human", """Generate report for:
-Crash Type: {crash_type}
-Severity: {severity}
-Solution: {solution}""")
+        ("system",REPORT_SYSTEM),
+        ("human",REPORT_HUMAN)
     ])
     chain = prompt | llm
     result = chain.invoke({
@@ -196,4 +199,4 @@ with open(filename, "w") as file:
     file.write("DETAILED REPORT:\n")
     file.write(result['report'] + "\n")
 
-print(f"\n✅ Report saved: {filename}")
+print(f"\nReport saved: {filename}")
