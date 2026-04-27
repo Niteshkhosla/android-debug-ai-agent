@@ -1,0 +1,10 @@
+# state.py — CrashState definition
+from typing import TypedDict
+
+class CrashState(TypedDict):
+    crash_log: str
+    crash_type: str
+    severity: str
+    relevant_docs: str
+    solution: str
+    report: str
