@@ -3,7 +3,7 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, END
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import SentenceTransformerEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from state import CrashState
 from datetime import datetime
 
@@ -12,7 +12,7 @@ load_dotenv()
 llm = ChatGroq(model="llama-3.3-70b-versatile")
 
 # RAG - Knowledge Base load karo
-embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = Chroma(
     persist_directory="./android_knowledge",
     embedding_function=embeddings
@@ -22,7 +22,7 @@ vectorstore = Chroma(
 with open("crash_log.txt", "r") as file:
     crash_log = file.read()
 
-print("✅ Crash log loaded!")
+print("Crash log loaded!")
 print(f"Log size: {len(crash_log)} characters\n")
 
 
