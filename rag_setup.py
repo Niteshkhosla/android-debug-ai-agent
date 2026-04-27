@@ -1,6 +1,7 @@
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import CharacterTextSplitter
+from constants import KNOWLEDGE_BASE_DIR
 
 # Android knowledge base
 android_docs = [
@@ -37,7 +38,7 @@ embedding =HuggingFaceEmbeddings(
 vectorstore=Chroma.from_texts(
     embedding=embedding,
     texts=android_docs,
-    persist_directory="./android_knowledge"
+    persist_directory=KNOWLEDGE_BASE_DIR
 )
 
 print("Android Knowledge Base ready!")
