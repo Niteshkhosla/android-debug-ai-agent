@@ -5,6 +5,7 @@ from langgraph.graph import StateGraph, END
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 from typing import TypedDict
+from datetime import datetime
 
 load_dotenv()
 
@@ -58,11 +59,11 @@ def search_docs(state: CrashState):
 # Router
 def route_crash(state: CrashState):
     crash_type = state["crash_type"].strip()
-    if "NPE" in crash_type:
+    if crash_type in "NPE":
         return "npe_solution"
-    elif "ANR" in crash_type:
+    elif  crash_type in "ANR":
         return "anr_solution"
-    elif "OOM" in crash_type:
+    elif  crash_type  in "OOM":
         return "oom_solution"
     else:
         return "other_solution"
@@ -186,3 +187,21 @@ print(f"Crash Type : {result['crash_type']}")
 print(f"Severity   : {result['severity']}")
 print(f"\nSolution:\n{result['solution']}")
 print(f"\nReport:\n{result['report']}")
+
+# Report file mein save karo
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+filename = f"crash_report_{timestamp}.txt"
+
+with open(filename, "w") as file:
+    file.write("=" * 50 + "\n")
+    file.write("ANDROID CRASH ANALYSIS REPORT\n")
+    file.write("=" * 50 + "\n\n")
+    file.write(f"Timestamp  : {timestamp}\n")
+    file.write(f"Crash Type : {result['crash_type']}\n")
+    file.write(f"Severity   : {result['severity']}\n\n")
+    file.write("SOLUTION:\n")
+    file.write(result['solution'] + "\n\n")
+    file.write("DETAILED REPORT:\n")
+    file.write(result['report'] + "\n")
+
+print(f"\n✅ Report saved: {filename}")
