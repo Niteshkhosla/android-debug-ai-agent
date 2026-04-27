@@ -4,7 +4,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, END
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import SentenceTransformerEmbeddings
-from typing import TypedDict
+from state import CrashState
 from datetime import datetime
 
 load_dotenv()
@@ -22,17 +22,9 @@ vectorstore = Chroma(
 with open("crash_log.txt", "r") as file:
     crash_log = file.read()
 
-print("Crash log loaded!")
+print("✅ Crash log loaded!")
 print(f"Log size: {len(crash_log)} characters\n")
 
-# State
-class CrashState(TypedDict):
-    crash_log: str
-    crash_type: str
-    severity: str
-    relevant_docs: str
-    solution: str
-    report: str
 
 # Agent 1 - Classify
 def classify_crash(state: CrashState):
@@ -204,4 +196,4 @@ with open(filename, "w") as file:
     file.write("DETAILED REPORT:\n")
     file.write(result['report'] + "\n")
 
-print(f"\n Report saved: {filename}")
+print(f"\n✅ Report saved: {filename}")
