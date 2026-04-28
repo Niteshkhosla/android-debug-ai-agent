@@ -1,5 +1,10 @@
 langchain
 langchain-groq
 langchain-core
+langchain-community
+langchain-huggingface
 langgraph
 python-dotenv
+chromadb
+sentence-transformers
+streamlit
